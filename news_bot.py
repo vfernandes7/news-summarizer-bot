@@ -85,9 +85,9 @@ for news in news_list[:news_for_summary]:
 ''')
 
 #saving both files
-with open('news.txt', 'w', encoding='utf-8') as file:
+with open('TXT_files/news.txt', 'w', encoding='utf-8') as file:
     file.write(all_news)
-with open('source.txt', 'w', encoding='utf-8') as file:
+with open('TXT_files/source.txt', 'w', encoding='utf-8') as file:
     file.write(news_source)
 
 #creating OpenAI client from project key on .env
@@ -128,7 +128,7 @@ else:
     print('Erro', run.status)
 
 #saving the AI summarized news
-with open('summary.txt', 'w', encoding='utf-8') as file:
+with open('TXT_files/summary.txt', 'w', encoding='utf-8') as file:
     file.write(summary)
 
 #generating TTS audio and saving it
@@ -137,4 +137,31 @@ response = client.audio.speech.create(
     voice="alloy",
     input=summary,
 )
-response.write_to_file("summarized_news_audio.mp3")
+response.write_to_file("TTS_files/summarized_news_audio.mp3")
+
+#sending audio to telegram chats list
+#chats id list example on .env = 6123045347,6456078947,6456077454
+telegram_token = os.getenv('TELEGRAM_TOKEN')
+chat_id_list = os.getenv('TELEGRAM_CHAT_ID_LIST').split(',')
+
+today = datetime.today().strftime('%d/%m/%Y')
+
+for chat_id in chat_id_list:
+    with open("TTS_files/summarized_news_audio.mp3", 'rb') as audio:
+        payload = {
+            'chat_id': chat_id,
+            'title': f'Resumo Notícias {today}',
+            'parse_mode': 'HTML'
+        }
+        files = {
+            'audio': audio.read(),
+        }
+        try:
+            with requests.session() as s:
+                req = s.post(
+                    url=f"https://api.telegram.org/bot{telegram_token}/sendAudio",
+                    data=payload,
+                    files=files
+                )
+        except:
+            pass
